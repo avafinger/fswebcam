@@ -13,10 +13,18 @@ INSTALLING
 
 Run the following commands in the source folder to build and install fswebcam:
 
-./configure --prefix=/usr
+./configure --prefix=/usr --disable-v4l1 --enable-32bit-buffer
 make
-make install
+sudo make install
 
 It's only requirements are that the GD library be installed with JPEG, PNG
 and FreeType support.
+
+Install Dependencies:
+====================
+sudo apt-get install libgd2-xpm-dev libjpeg-dev libpng-dev 
+
+sudo apt-get install libfreetype6-dev
+
+
 
