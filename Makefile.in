@@ -1,0 +1,42 @@
+# Makefile for fswebcam
+# [25/12/2009]
+
+SHELL = /bin/sh
+
+prefix      = @prefix@
+exec_prefix = @exec_prefix@
+bindir      = @bindir@
+mandir      = @mandir@
+datarootdir = @datarootdir@
+
+CC      = @CC@
+CFLAGS  = @CPPFLAGS@ @CFLAGS@ @DEFS@
+LDFLAGS = @LDFLAGS@
+
+OBJS  = fswebcam.o log.o effects.o parse.o src.o @SRC_OBJS@
+OBJS += dec_rgb.o dec_yuv.o dec_grey.o dec_bayer.o dec_jpeg.o dec_png.o
+OBJS += dec_s561.o
+
+all: fswebcam fswebcam.1.gz
+
+install: all
+	mkdir -p ${DESTDIR}${bindir}
+	mkdir -p ${DESTDIR}${mandir}/man1
+	install -m 755 fswebcam ${DESTDIR}${bindir}
+	install -m 644 fswebcam.1.gz ${DESTDIR}${mandir}/man1
+
+fswebcam: $(OBJS)
+	$(CC) -o fswebcam $(OBJS) $(LDFLAGS)
+
+.c.o:
+	${CC} ${CFLAGS} -c $< -o $@
+
+fswebcam.1.gz: fswebcam.1
+	gzip -c --best fswebcam.1 > fswebcam.1.gz
+
+clean:
+	rm -f core* *.o fswebcam fswebcam.1.gz
+
+distclean: clean
+	rm -rf config.h *.cache config.log config.status Makefile *.jp*g *.png *~
+
