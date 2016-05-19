@@ -26,5 +26,12 @@ sudo apt-get install libgd2-xpm-dev libjpeg-dev libpng-dev
 
 sudo apt-get install libfreetype6-dev
 
+Run samples:
+===========
+fswebcam --Vflip 1 -r 1600x1200 -p YUV420P - > cam640x480_2.jpg
+fswebcam --Hflip 1 -r 640x480 -p YUV420P - > cam640x480_1.jpg
+fswebcam --exposure 4 -r 640x480 -p YUV420P - > cam640x480_3.jpg
+
+** Don't forget to update your GC2035 driver to get better results
 
 
