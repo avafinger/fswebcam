@@ -1,4 +1,4 @@
-
+# fswebcam 
 fswebcam - Small and simple webcam software for *nix.
 
 Created by Philip Heron <phil@sanslogic.co.uk>
@@ -9,7 +9,7 @@ of frames from any V4L or V4L2 compatible device, averages them to reduce noise
 and draws the details on it using the GD Graphics Library which also handles
 compressing the image to PNG or JPEG.
 
-INSTALLING
+## INSTALLING
 
 Run the following commands in the source folder to build and install fswebcam:
 
