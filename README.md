@@ -248,3 +248,4 @@ In order to use fswebcam in your Distro running a mainline kernel version you ne
           media-ctl --device /dev/media1 --set-v4l2 '"ov5640 2-003c":0[fmt:YUYV8_2X8/1280x720]'
           ./fswebcam --displayfps 1 -S 30 -d /dev/video0 -r 1280x720 -p YUV420P - > /tmp/cam_640x480_yuv420p.jpg
 
+![640x480](https://github.com/avafinger/fswebcam/raw/mainline-kernel/nanopi-air/cam_640x480_yuv420p.jpg)
