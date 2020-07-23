@@ -558,7 +558,6 @@ int src_v4l2_set_pix_format(src_t *src)
 	while(ioctl(s->fd, VIDIOC_ENUM_FMT, &fmt) != -1)
 	{
 		DEBUG("%i: [0x%08X] '%c%c%c%c' (%s)", v4l2_pal,
-		      fmt.pixelformat,
 		      fmt.pixelformat >> 0,  fmt.pixelformat >> 8,
 		      fmt.pixelformat >> 16, fmt.pixelformat >> 24,
 		      fmt.description);
@@ -604,6 +603,12 @@ int src_v4l2_set_pix_format(src_t *src)
 			src->palette = v4l2_palette[v4l2_pal].src;
 			
 			INFO("Using palette %s", src_palette[src->palette].name);
+			INFO("%i: '%c%c%c%c'", v4l2_pal,
+			      s->fmt.fmt.pix.pixelformat >> 0,  s->fmt.fmt.pix.pixelformat >> 8,
+			      s->fmt.fmt.pix.pixelformat >> 16, s->fmt.fmt.pix.pixelformat >> 24);
+			sprintf(src->src_palette,"'%c%c%c%c'", 
+				s->fmt.fmt.pix.pixelformat >> 0,  s->fmt.fmt.pix.pixelformat >> 8,
+				s->fmt.fmt.pix.pixelformat >> 16, s->fmt.fmt.pix.pixelformat >> 24);
 			
 			if(s->fmt.fmt.pix.width != src->width ||
 			   s->fmt.fmt.pix.height != src->height)

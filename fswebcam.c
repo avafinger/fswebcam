@@ -93,9 +93,10 @@ enum fswc_options {
 	OPT_EXEC,
 	OPT_DUMPFRAME,
 	OPT_FPS,
-    OPT_EXPOSURE,
-    OPT_HFLIP,
-    OPT_VFLIP,
+	OPT_EXPOSURE,
+	OPT_HFLIP,
+	OPT_VFLIP,
+	OPT_DISPLAY_FPS,
 };
 
 typedef struct {
@@ -181,6 +182,9 @@ typedef struct {
     int exposure;
     int hflip;
     int vflip;
+    int display_fps;
+    int captured_fps;
+    unsigned char src_palette[8];
 	
 } fswebcam_config_t;
 
@@ -359,6 +363,7 @@ int fswc_draw_overlay(fswebcam_config_t *config, char *filename, gdImage *image)
 int fswc_draw_banner(fswebcam_config_t *config, gdImage *image)
 {
 	char timestamp[200];
+    char FPS[32];
 	int w, h;
 	int height;
 	int spacing;
@@ -410,6 +415,14 @@ int fswc_draw_banner(fswebcam_config_t *config, gdImage *image)
 	fswc_DrawText(image, config->font, config->fontsize,
 	              spacing, y, ALIGN_LEFT,
 	              config->fg_colour, config->shadow, config->title);
+                  
+    /* Draw FPS */
+    if (config->display_fps) {
+        sprintf(FPS, "%d FPS - %s", config->captured_fps, config->src_palette);
+        fswc_DrawText(image, config->font, config->fontsize,
+	              spacing, y, ALIGN_LEFT,
+	              config->fg_colour, config->shadow, FPS);
+    }
 	
 	/* Draw the timestamp. */
 	fswc_DrawText(image, config->font, config->fontsize * 0.8,
@@ -559,6 +572,15 @@ int fswc_exec(fswebcam_config_t *config, char *cmd)
 	return(0);
 }
 
+static double get_wall_time(void)
+{
+    struct timeval time;
+    if (gettimeofday(&time, NULL))
+        return 0.;
+    return (double) time.tv_sec + (double) time.tv_usec * .000001;
+}
+
+
 int fswc_grab(fswebcam_config_t *config)
 {
 	uint32_t frame;
@@ -567,7 +589,7 @@ int fswc_grab(fswebcam_config_t *config)
 	gdImage *image, *original;
 	uint8_t modified;
 	src_t src;
-	
+
 	/* Record the start time. */
 	config->start = time(NULL);
 	
@@ -617,7 +639,12 @@ int fswc_grab(fswebcam_config_t *config)
 	/* Grab (and do nothing with) the skipped frames. */
 	for(frame = 0; frame < config->skipframes; frame++)
 		if(src_grab(&src) == -1) break;
-	
+    
+	if (config->display_fps) {
+		MSG("Display FPS...");
+	}
+        
+    
 	/* If frames where skipped, inform when normal capture begins. */
 	if(config->skipframes) MSG("Capturing %i frames...", config->frames);
 	
@@ -699,6 +726,9 @@ int fswc_grab(fswebcam_config_t *config)
 	
 	/* We are now finished with the capture card. */
 	src_close(&src);
+	/* saved it for later (display in banner) */
+	config->captured_fps = src.captured_fps; 
+	strcpy(config->src_palette, src.src_palette);
 	
 	/* Fail if no frames where captured. */
 	if(!frame)
@@ -1400,6 +1430,7 @@ int fswc_getopts(fswebcam_config_t *config, int argc, char *argv[])
 		{"png",             required_argument, 0, OPT_PNG},
 		{"save",            required_argument, 0, OPT_SAVE},
 		{"exec",            required_argument, 0, OPT_EXEC},
+		{"displayfps",      required_argument, 0, OPT_DISPLAY_FPS},
 		{0, 0, 0, 0}
 	};
 	char *opts = "-qc:vl:bL:d:i:t:f:D:r:F:s:S:p:R:e";
@@ -1565,6 +1596,10 @@ int fswc_getopts(fswebcam_config_t *config, int argc, char *argv[])
 			free(config->dumpframe);
 			config->dumpframe = strdup(optarg);
 			break;
+        case OPT_DISPLAY_FPS:
+			config->display_fps = atoi(optarg);
+			break;
+            
 		default:
 			/* All other options are added to the job queue. */
 			fswc_add_job(config, c, optarg);
@@ -1603,7 +1638,7 @@ int fswc_free_config(fswebcam_config_t *config)
 	free(config->input);
 	
 	free(config->dumpframe);
-        free(config->title);
+	free(config->title);
 	free(config->subtitle);
 	free(config->timestamp);
 	free(config->info);
@@ -1611,7 +1646,7 @@ int fswc_free_config(fswebcam_config_t *config)
 	free(config->underlay);
 	free(config->overlay);
 	free(config->filename);
-	
+
 	src_free_options(&config->option);
 	fswc_free_jobs(config);
 	

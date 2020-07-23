@@ -82,10 +82,12 @@ typedef struct {
 	uint32_t timeout;
 	char     use_read;
 
-    /* Hack (@lex) */
-    int exposure;
-    int hflip;
-    int vflip;
+	/* Hack (@lex) */
+	int exposure;
+	int hflip;
+	int vflip;
+	int captured_fps;
+	unsigned char src_palette[8];
 	
 	/* List Options */
 	uint8_t list;

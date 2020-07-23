@@ -189,6 +189,7 @@ int src_close(src_t *src)
 			MSG("Captured %i frames in %0.2f seconds. (%i fps)",
 			    src->captured_frames, seconds,
 			    (int) (src->captured_frames / seconds));
+			src->captured_fps = (int) (src->captured_frames / seconds);
 		}
 	}
 	
