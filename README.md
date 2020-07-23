@@ -20,17 +20,16 @@ sudo make install
 It's only requirements are that the GD library be installed with JPEG, PNG
 and FreeType support.
 
-Install Dependencies:
-====================
-sudo apt-get install libgd2-xpm-dev libjpeg-dev libpng-dev 
+## Install Dependencies
 
-sudo apt-get install libfreetype6-dev
+        sudo apt-get install libgd-dev libjpeg-dev libpng-dev 
+        sudo apt-get install libfreetype6-dev
 
-Run samples:
-===========
-fswebcam --Vflip 1 -r 1600x1200 -p YUV420P - > cam640x480_2.jpg
-fswebcam --Hflip 1 -r 640x480 -p YUV420P - > cam640x480_1.jpg
-fswebcam --exposure 4 -r 640x480 -p YUV420P - > cam640x480_3.jpg
+## Run samples:
+
+        fswebcam --Vflip 1 -r 1600x1200 -p YUV420P - > cam640x480_2.jpg
+        fswebcam --Hflip 1 -r 640x480 -p YUV420P - > cam640x480_1.jpg
+        fswebcam --exposure 4 -r 640x480 -p YUV420P - > cam640x480_3.jpg
 
 ** Don't forget to update your GC2035 driver to get better results
 
@@ -244,7 +243,7 @@ In order to use fswebcam in your Distro running a mainline kernel version you ne
               -> "sun6i-csi":0 [ENABLED,IMMUTABLE]
 
 
-* Grab files from **fswebcam**
+* Grab files from OV5640 using the **fswebcam**
 
           media-ctl --device /dev/media1 --set-v4l2 '"ov5640 2-003c":0[fmt:YUYV8_2X8/1280x720]'
           ./fswebcam --displayfps 1 -S 30 -d /dev/video0 -r 1280x720 -p YUV420P - > /tmp/cam_640x480_yuv420p.jpg
