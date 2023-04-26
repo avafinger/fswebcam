@@ -1,0 +1,80 @@
+fswebcam (20140113-2) unstable; urgency=medium
+
+  * Build-Depend on libgd-dev instead of libgd2-*-dev (Closes: #881745)
+  * Use DEP5 format for debian/copyright
+  * Bump Standards-Version (no changes needed)
+
+ -- Luca Niccoli <lultimouomo@gmail.com>  Wed, 22 Nov 2017 10:56:11 +0100
+
+fswebcam (20140113-1) unstable; urgency=low
+
+  * Update debian/watch
+  * Import Upstream version 20140113
+  * Bump Standards-Version to 3.9.5 (no changes needed)
+  * Move to debhelper 9
+  * Import CPPFLAGS during build
+  * Move packaging to git
+
+ -- Luca Niccoli <lultimouomo@gmail.com>  Tue, 21 Jan 2014 00:02:55 +0100
+
+fswebcam (20110717-1) unstable; urgency=low
+
+  * New upstream release (Closes: #655138)
+  * Bump Standards-Version to 3.9.3 (no changes needed).
+
+ -- Luca Niccoli <lultimouomo@gmail.com>  Sun, 22 Apr 2012 23:59:34 +0200
+
+fswebcam (20101118-2) unstable; urgency=low
+
+  * videodev.h has moved out of build-essentials, get it from libv4l-dev.
+    Thanks to Daniel Polehn that fixed the problem in Ubuntu and forwarded
+    the patch to Debian. (Closes: #631577)
+  * Bump Standards-Version to 3.9.2 (no changes needed).
+
+ -- Luca Niccoli <lultimouomo@gmail.com>  Sat, 25 Jun 2011 19:13:25 +0200
+
+fswebcam (20101118-1) unstable; urgency=low
+
+  * New upstream release (Closes: #604121)
+  * Enable libgd fontconfig support if available. Default to "sans:10".
+    You'll need libgd2-xpm to use this feature.
+  * Add S561 compressed palette support.
+  * Fix small memory leak in the logging system.
+  * Add option to swap colour channels in the image.
+  * Bump Standards-Version to 3.9.1 (make use of architecture wildcard).
+
+ -- Luca Niccoli <lultimouomo@gmail.com>  Sun, 06 Feb 2011 15:06:25 +0100
+
+fswebcam (20100622-1) unstable; urgency=low
+
+  * New upstream release. (Closes: #581518)
+  * Remove patches merged upstream.
+  * Fixes to the V4L1 source. (Closes: #586366)
+
+ -- Luca Niccoli <lultimouomo@gmail.com>  Wed, 23 Jun 2010 23:00:13 +0200
+
+fswebcam (20100401-1) unstable; urgency=low
+
+  * New upstream release.
+  * Remove patches merged upstream.
+  * Update upstream email address.
+  * Bump Standards-Version to 3.8.4 (no changes needed).
+
+ -- Luca Niccoli <lultimouomo@gmail.com>  Mon, 05 Apr 2010 13:18:29 +0200
+
+fswebcam (20091224-1) unstable; urgency=low
+
+  * New upstream release. (Closes: #564889)
+  * Switch to dpkg-source 3.0 (quilt) format.
+  * Switch to dh7 minimal rules file.
+  * Don't draw an empty banner.
+  * Bump Standards-Version to 3.8.3 (no changes needed).
+
+ -- Luca Niccoli <lultimouomo@gmail.com>  Wed, 13 Jan 2010 22:24:14 +0100
+
+fswebcam (20070108-1) unstable; urgency=low
+
+  [ Luca Niccoli ]
+  * Initial Debian release. (Closes: #513575)
+
+ -- Luca Niccoli <lultimouomo@gmail.com>  Sat, 03 May 2009 01:47:35 +0200
