@@ -103,6 +103,11 @@ struct mjpeg_status {
 /*
 Private IOCTL to set up for displaying MJPEG
 */
+
+#ifndef BASE_VIDIOCPRIVATE
+#define BASE_VIDIOCPRIVATE      192
+#endif
+
 #define MJPIOC_G_PARAMS       _IOR ('v', BASE_VIDIOCPRIVATE+0,  struct mjpeg_params)
 #define MJPIOC_S_PARAMS       _IOWR('v', BASE_VIDIOCPRIVATE+1,  struct mjpeg_params)
 #define MJPIOC_REQBUFS        _IOWR('v', BASE_VIDIOCPRIVATE+2,  struct mjpeg_requestbuffers)

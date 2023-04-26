@@ -143,8 +143,8 @@ typedef struct {
 	uint8_t list;
 	
 	/* Image capture options. */
-	int width;
-	int height;
+	unsigned int width;
+	unsigned int height;
 	unsigned int frames;
 	unsigned int fps;
 	unsigned int skipframes;
@@ -177,14 +177,14 @@ typedef struct {
 	char *filename;
 	char format;
 	char compression;
-
-    /* Hack (@lex) */
-    int exposure;
-    int hflip;
-    int vflip;
-    int display_fps;
-    int captured_fps;
-    unsigned char src_palette[8];
+	
+	/* Hack (@lex) */
+	int exposure;
+	int hflip;
+	int vflip;
+	int display_fps;
+	int captured_fps;
+	unsigned char src_palette[8];
 	
 } fswebcam_config_t;
 
@@ -363,7 +363,7 @@ int fswc_draw_overlay(fswebcam_config_t *config, char *filename, gdImage *image)
 int fswc_draw_banner(fswebcam_config_t *config, gdImage *image)
 {
 	char timestamp[200];
-    char FPS[32];
+	char FPS[32];
 	int w, h;
 	int height;
 	int spacing;
@@ -415,14 +415,15 @@ int fswc_draw_banner(fswebcam_config_t *config, gdImage *image)
 	fswc_DrawText(image, config->font, config->fontsize,
 	              spacing, y, ALIGN_LEFT,
 	              config->fg_colour, config->shadow, config->title);
-                  
-    /* Draw FPS */
-    if (config->display_fps) {
-        sprintf(FPS, "%d FPS - %s", config->captured_fps, config->src_palette);
-        fswc_DrawText(image, config->font, config->fontsize,
+
+	/* Draw FPS */
+	if (config->display_fps) {
+	    sprintf(FPS, "%d FPS - %s", config->captured_fps, config->src_palette);
+            fprintf(stderr, "%s\n", FPS);
+	    fswc_DrawText(image, config->font, config->fontsize,
 	              spacing, y, ALIGN_LEFT,
 	              config->fg_colour, config->shadow, FPS);
-    }
+	}
 	
 	/* Draw the timestamp. */
 	fswc_DrawText(image, config->font, config->fontsize * 0.8,
@@ -589,7 +590,7 @@ int fswc_grab(fswebcam_config_t *config)
 	gdImage *image, *original;
 	uint8_t modified;
 	src_t src;
-
+	
 	/* Record the start time. */
 	config->start = time(NULL);
 	
@@ -607,11 +608,11 @@ int fswc_grab(fswebcam_config_t *config)
 	src.height     = config->height;
 	src.fps        = config->fps;
 	src.option     = config->option;
-
-    /* Hack (@lex) */
-    src.exposure   = config->exposure;
-    src.hflip      = config->hflip;
-    src.vflip      = config->vflip;
+	
+	/* Hack (@lex) */
+	src.exposure   = config->exposure;
+	src.hflip      = config->hflip;
+	src.vflip      = config->vflip;
 	
 	HEAD("--- Opening %s...", config->device);
 	
@@ -634,17 +635,17 @@ int fswc_grab(fswebcam_config_t *config)
 	else HEAD("--- Capturing %i frames...", config->frames);
 	
 	if(config->skipframes == 1) MSG("Skipping frame...");
-	else if(config->skipframes > 1) MSG("Skipping %i frames...", config->skipframes);
+	else if(config->skipframes > 1) MSG("Skipped %i frames...", config->skipframes);
 	
 	/* Grab (and do nothing with) the skipped frames. */
 	for(frame = 0; frame < config->skipframes; frame++)
 		if(src_grab(&src) == -1) break;
-    
+
 	if (config->display_fps) {
 		MSG("Display FPS...");
 	}
-        
-    
+
+	
 	/* If frames where skipped, inform when normal capture begins. */
 	if(config->skipframes) MSG("Capturing %i frames...", config->frames);
 	
@@ -1126,29 +1127,20 @@ int fswc_usage()
 	       " -v, --verbose                Displays extra messages while capturing\n"
 	       "     --version                Displays the version and exits.\n"
 	       " -l, --loop <seconds>         Run in loop mode.\n"
-	       "     --offset <seconds>       Sets the capture time offset in loop mode.\n"
 	       " -b, --background             Run in the background.\n"
-	       "     --pid <filename>         Saves background process PID to filename.\n"
-	       " -L, --log [file/syslog:]<filename> Redirect log messages to a file or syslog.\n"
+	       " -o, --output <filename>      Output the log to a file.\n"
 	       " -d, --device <name>          Sets the source to use.\n"
 	       " -i, --input <number/name>    Selects the input to use.\n"
-	       "     --list-inputs            Displays available inputs.\n"
 	       " -t, --tuner <number>         Selects the tuner to use.\n"
-	       "     --list-tuners            Displays available tuners.\n"
 	       " -f, --frequency <number>     Selects the frequency use.\n"
 	       " -p, --palette <name>         Selects the palette format to use.\n"
 	       " -D, --delay <number>         Sets the pre-capture delay time. (seconds)\n"
 	       " -r, --resolution <size>      Sets the capture resolution.\n"
 	       "     --fps <framerate>        Sets the capture frame rate.\n"
-	       "     --list-framesizes        Displays the available frame sizes.\n"
-	       "     --list-framerates        Displays the available frame rates.\n"
 	       " -F, --frames <number>        Sets the number of frames to capture.\n"
 	       " -S, --skip <number>          Sets the number of frames to skip.\n"
 	       "     --dumpframe <filename>   Dump a raw frame to file.\n"
-	       " -R, --read                   Use read() to capture images.\n"
-	       "     --list-formats           Displays the available capture formats.\n"
 	       " -s, --set <name>=<value>     Sets a control value.\n"
-	       "     --list-controls          Displays the available controls.\n"
 	       "     --revert                 Restores original captured image.\n"
 	       "     --flip <direction>       Flips the image. (h, v)\n"
 	       "     --crop <size>[,<offset>] Crop a part of the image.\n"
@@ -1181,7 +1173,7 @@ int fswc_usage()
 	       "     --overlay <PNG image>    Sets the overlay image.\n"
 	       "     --no-overlay             Clears the overlay.\n"
 	       "     --jpeg <factor>          Outputs a JPEG image. (-1, 0 - 95)\n"
-	       "     --png <factor>           Outputs a PNG image. (-1, 0 - 9)\n"
+	       "     --png <factor>           Outputs a PNG image. (-1, 0 - 10)\n"
 	       "     --save <filename>        Save image to file.\n"
 	       "     --exec <command>         Execute a command and wait for it to complete.\n"
 	       "\n");
@@ -1364,9 +1356,9 @@ int fswc_getopts(fswebcam_config_t *config, int argc, char *argv[])
 	static struct option long_opts[] =
 	{
 		{"help",            no_argument,       0, '?'},
-        {"exposure",        required_argument, 0, OPT_EXPOSURE},
-        {"Hflip",           required_argument, 0, OPT_HFLIP},
-        {"Vflip",           required_argument, 0, OPT_VFLIP},
+		{"exposure",        required_argument, 0, OPT_EXPOSURE},
+		{"Hflip",           required_argument, 0, OPT_HFLIP},
+ 		{"Vflip",           required_argument, 0, OPT_VFLIP},
 		{"config",          required_argument, 0, 'c'},
 		{"quiet",           no_argument,       0, 'q'},
 		{"verbose",         no_argument,       0, 'v'},
@@ -1468,10 +1460,10 @@ int fswc_getopts(fswebcam_config_t *config, int argc, char *argv[])
 	config->jobs = 0;
 	config->job = NULL;
 
-    /* Hack - @lex */
-    config->exposure = 0xf0000000;
-    config->hflip = 0xf0000000;
-    config->vflip = 0xf0000000;
+	/* Hack - @lex */
+	config->exposure = 0xf0000000;
+	config->hflip = 0xf0000000;
+	config->vflip = 0xf0000000;
 	
 	/* Don't report errors. */
 	opterr = 0;
@@ -1486,17 +1478,17 @@ int fswc_getopts(fswebcam_config_t *config, int argc, char *argv[])
 		{
 		case '?': fswc_usage(); /* Command line error. */
 		case '!': return(-1);   /* Conf file error. */
-        case OPT_EXPOSURE:
-            config->exposure = atoi(optarg);
-            break;
-        case OPT_HFLIP:
-            config->hflip = atoi(optarg);
-            INFO("Hflip: %s", optarg);
-            break;
-        case OPT_VFLIP:
-            config->vflip = atoi(optarg);
-            INFO("Vflip: %s", optarg);
-            break;
+		case OPT_EXPOSURE:
+			config->exposure = atoi(optarg);
+		break;
+		case OPT_HFLIP:
+			config->hflip = atoi(optarg);
+			INFO("Hflip: %s", optarg);
+		break;
+		case OPT_VFLIP:
+			config->vflip = atoi(optarg);
+			INFO("Vflip: %s", optarg);
+		break;
 		case 'c':
 			INFO("Reading configuration from '%s'...", optarg);
 			s.f = fopen(optarg, "rt");
@@ -1596,10 +1588,10 @@ int fswc_getopts(fswebcam_config_t *config, int argc, char *argv[])
 			free(config->dumpframe);
 			config->dumpframe = strdup(optarg);
 			break;
-        case OPT_DISPLAY_FPS:
+		case OPT_DISPLAY_FPS:
 			config->display_fps = atoi(optarg);
 			break;
-            
+
 		default:
 			/* All other options are added to the job queue. */
 			fswc_add_job(config, c, optarg);
@@ -1638,7 +1630,7 @@ int fswc_free_config(fswebcam_config_t *config)
 	free(config->input);
 	
 	free(config->dumpframe);
-	free(config->title);
+        free(config->title);
 	free(config->subtitle);
 	free(config->timestamp);
 	free(config->info);
@@ -1646,7 +1638,7 @@ int fswc_free_config(fswebcam_config_t *config)
 	free(config->underlay);
 	free(config->overlay);
 	free(config->filename);
-
+	
 	src_free_options(&config->option);
 	fswc_free_jobs(config);
 	
@@ -1759,3 +1751,4 @@ int main(int argc, char *argv[])
 	
 	return(0);
 }
+

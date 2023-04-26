@@ -25,35 +25,25 @@
 
 #ifdef HAVE_V4L2
 
-#define CLEAR(x) memset(&(x), 0, sizeof(x))
-#define BUF_TYPE_CAPTURE(mplane) \
-     (mplane? V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE : V4L2_BUF_TYPE_VIDEO_CAPTURE)
-
-#define NPLANES 1
-#define BUFFER_COUNT 8
-
-static int use_mplane = 0;
-
-
 typedef struct {
 	void *start;
 	size_t length;
 } v4l2_buffer_t;
 
 typedef struct {
-
+	
 	int fd;
 	char map;
-
+	
 	struct v4l2_capability cap;
 	struct v4l2_format fmt;
 	struct v4l2_requestbuffers req;
 	struct v4l2_buffer buf;
-
+	
 	v4l2_buffer_t *buffer;
-
+	
 	int pframe;
-
+	
 } src_v4l2_t;
 
 static int src_v4l2_close(src_t *src);
@@ -87,20 +77,19 @@ v4l2_palette_t v4l2_palette[] = {
 int src_v4l2_get_capability(src_t *src)
 {
 	src_v4l2_t *s = (src_v4l2_t *) src->state;
-
+	
 	if(ioctl(s->fd, VIDIOC_QUERYCAP, &s->cap) < 0)
 	{
 		ERROR("%s: Not a V4L2 device?", src->source);
 		return(-1);
 	}
-
+	
 	DEBUG("%s information:", src->source);
 	DEBUG("cap.driver: \"%s\"", s->cap.driver);
 	DEBUG("cap.card: \"%s\"", s->cap.card);
 	DEBUG("cap.bus_info: \"%s\"", s->cap.bus_info);
 	DEBUG("cap.capabilities=0x%08X", s->cap.capabilities);
 	if(s->cap.capabilities & V4L2_CAP_VIDEO_CAPTURE) DEBUG("- VIDEO_CAPTURE");
-        if(s->cap.capabilities & V4L2_CAP_VIDEO_CAPTURE_MPLANE) DEBUG("- VIDEO_CAPTURE");
 	if(s->cap.capabilities & V4L2_CAP_VIDEO_OUTPUT)  DEBUG("- VIDEO_OUTPUT");
 	if(s->cap.capabilities & V4L2_CAP_VIDEO_OVERLAY) DEBUG("- VIDEO_OVERLAY");
 	if(s->cap.capabilities & V4L2_CAP_VBI_CAPTURE)   DEBUG("- VBI_CAPTURE");
@@ -113,15 +102,13 @@ int src_v4l2_get_capability(src_t *src)
 	if(s->cap.capabilities & V4L2_CAP_ASYNCIO)       DEBUG("- ASYNCIO");
 	if(s->cap.capabilities & V4L2_CAP_STREAMING)     DEBUG("- STREAMING");
 	if(s->cap.capabilities & V4L2_CAP_TIMEPERFRAME)  DEBUG("- TIMEPERFRAME");
-
-	if(!s->cap.capabilities & V4L2_CAP_VIDEO_CAPTURE || !s->cap.capabilities & V4L2_CAP_VIDEO_CAPTURE_MPLANE)
+	
+	if(!s->cap.capabilities & V4L2_CAP_VIDEO_CAPTURE)
 	{
 		ERROR("Device does not support capturing.");
 		return(-1);
 	}
-	if(s->cap.capabilities & V4L2_CAP_VIDEO_CAPTURE_MPLANE)
-	    use_mplane = 1;
-
+	
 	return(0);
 }
 
@@ -130,13 +117,13 @@ int src_v4l2_set_input(src_t *src)
 	src_v4l2_t *s = (src_v4l2_t *) src->state;
 	struct v4l2_input input;
 	int count = 0, i = -1;
-
+	
 	memset(&input, 0, sizeof(input));
-
+	
 	if(src->list & SRC_LIST_INPUTS)
 	{
 		HEAD("--- Available inputs:");
-
+		
 		input.index = count;
 		while(!ioctl(s->fd, VIDIOC_ENUMINPUT, &input))
 		{
@@ -144,7 +131,7 @@ int src_v4l2_set_input(src_t *src)
 			input.index = ++count;
 		}
 	}
-
+	
 	/* If no input was specified, use input 0. */
 	if(!src->input)
 	{
@@ -152,7 +139,7 @@ int src_v4l2_set_input(src_t *src)
 		count = 1;
 		i = 0;
 	}
-
+	
 	/* Check if the input is specified by name. */
 	if(i == -1)
 	{
@@ -164,24 +151,24 @@ int src_v4l2_set_input(src_t *src)
 			input.index = ++count;
 		}
 	}
-
+	
 	if(i == -1)
 	{
 		char *endptr;
-
+		
 		/* Is the input specified by number? */
 		i = strtol(src->input, &endptr, 10);
-
+		
 		if(endptr == src->input) i = -1;
 	}
-
+	
 	if(i == -1 || i >= count)
 	{
 		/* The specified input wasn't found! */
 		ERROR("Unrecognised input \"%s\"", src->input);
 		return(-1);
 	}
-
+	
 	/* Set the input. */
 	input.index = i;
 	if(ioctl(s->fd, VIDIOC_ENUMINPUT, &input) == -1)
@@ -190,7 +177,7 @@ int src_v4l2_set_input(src_t *src)
 		ERROR("VIDIOC_ENUMINPUT: %s", strerror(errno));
 		return(-1);
 	}
-
+	
 	DEBUG("%s: Input %i information:", src->source, i);
 	DEBUG("name = \"%s\"", input.name);
 	DEBUG("type = %08X", input.type);
@@ -210,36 +197,36 @@ int src_v4l2_set_input(src_t *src)
 	if(input.status & V4L2_IN_ST_MACROVISION) DEBUG("- MACROVISION");
 	if(input.status & V4L2_IN_ST_NO_ACCESS) DEBUG("- NO_ACCESS");
 	if(input.status & V4L2_IN_ST_VTR) DEBUG("- VTR");
-
+	
 	if(ioctl(s->fd, VIDIOC_S_INPUT, &i) == -1)
 	{
 		ERROR("Error selecting input %i", i);
 		ERROR("VIDIOC_S_INPUT: %s", strerror(errno));
 		return(-1);
 	}
-
+	
 	/* If this input is attached to a tuner, set the frequency. */
 	if(input.type & V4L2_INPUT_TYPE_TUNER)
 	{
 		char *range;
 		struct v4l2_tuner tuner;
 		struct v4l2_frequency freq;
-
+		
 		/* Query the tuners capabilities. */
-
+		
 		memset(&tuner, 0, sizeof(tuner));
 		tuner.index = input.tuner;
-
+		
 		if(ioctl(s->fd, VIDIOC_G_TUNER, &tuner) == -1)
 		{
 			WARN("Error querying tuner %i.", input.tuner);
 			WARN("VIDIOC_G_TUNER: %s", strerror(errno));
 			return(0);
 		}
-
+		
 		if(tuner.capability & V4L2_TUNER_CAP_LOW) range = "kHz";
 		else range = "MHz";
-
+		
 		DEBUG("%s: Tuner %i information:", src->source, input.tuner);
 		DEBUG("name = \"%s\"", tuner.name);
 		DEBUG("type = %08X", tuner.type);
@@ -256,24 +243,24 @@ int src_v4l2_set_input(src_t *src)
 		DEBUG("rangehigh = %08X, (%.3f%s)", tuner.rangehigh, (double) tuner.rangehigh * 16 / 1000, range);
 		DEBUG("signal = %08X", tuner.signal);
 		DEBUG("afc = %08X", tuner.afc);
-
+		
 		/* Set the frequency. */
 		memset(&freq, 0, sizeof(freq));
 		freq.tuner = input.tuner;
 		freq.type = V4L2_TUNER_ANALOG_TV;
 		freq.frequency = (src->frequency / 1000) * 16;
-
+		
 		if(ioctl(s->fd, VIDIOC_S_FREQUENCY, &freq) == -1)
 		{
 			WARN("Error setting frequency %.3f%s", src->frequency / 16.0, range);
 			WARN("VIDIOC_S_FREQUENCY: %s", strerror(errno));
 			return(0);
 		}
-
+		
 		MSG("Set frequency to %.3f%s",
 		    (double) src->frequency / 1000, range);
 	}
-
+	
 	return(0);
 }
 
@@ -284,12 +271,12 @@ int src_v4l2_show_control(src_t *src, struct v4l2_queryctrl *queryctrl)
 	struct v4l2_control control;
 	char *t;
 	int m;
-
+	
 	if(queryctrl->flags & V4L2_CTRL_FLAG_DISABLED) return(0);
-
+	
 	memset(&querymenu, 0, sizeof(querymenu));
 	memset(&control, 0, sizeof(control));
-
+	
 	if(queryctrl->type != V4L2_CTRL_TYPE_BUTTON)
 	{
 		control.id = queryctrl->id;
@@ -299,18 +286,18 @@ int src_v4l2_show_control(src_t *src, struct v4l2_queryctrl *queryctrl)
 			ERROR("VIDIOC_G_CTRL: %s", strerror(errno));
 		}
 	}
-
+	
 	switch(queryctrl->type)
 	{
 	case V4L2_CTRL_TYPE_INTEGER:
-
+		
 		t = malloc(64); /* Ick ... TODO: re-write this. */
 		if(!t)
 		{
 			ERROR("Out of memory.");
 			return(-1);
 		}
-
+		
 		if(queryctrl->maximum - queryctrl->minimum <= 10)
 		{
 			snprintf(t, 63, "%i", control.value);
@@ -324,23 +311,23 @@ int src_v4l2_show_control(src_t *src, struct v4l2_queryctrl *queryctrl)
 			               queryctrl->maximum,
 			               control.value));
 		}
-
+		
 		MSG("%-25s %-15s %i - %i", queryctrl->name, t,
 		    queryctrl->minimum, queryctrl->maximum);
-
+		
 		free(t);
-
+		
 		break;
-
+		
 	case V4L2_CTRL_TYPE_BOOLEAN:
 		MSG("%-25s %-15s True | False", queryctrl->name,
 		    (control.value ? "True" : "False"));
 		break;
-
+		
 	case V4L2_CTRL_TYPE_MENU:
-
+		
 		querymenu.id = queryctrl->id;
-
+		
 		t = calloc((queryctrl->maximum - queryctrl->minimum) + 1, 34);
 		m = queryctrl->minimum;
 		for(m = queryctrl->minimum; m <= queryctrl->maximum; m++)
@@ -352,7 +339,7 @@ int src_v4l2_show_control(src_t *src, struct v4l2_queryctrl *queryctrl)
 				if(m < queryctrl->maximum) strncat(t, " | ", 3);
 			}
 		}
-
+		
 		querymenu.index = control.value;
 		if(ioctl(s->fd, VIDIOC_QUERYMENU, &querymenu))
 		{
@@ -362,21 +349,21 @@ int src_v4l2_show_control(src_t *src, struct v4l2_queryctrl *queryctrl)
 			ERROR("VIDIOC_QUERYMENU: %s", strerror(errno));
 			return(0);
 		}
-
+		
 		MSG("%-25s %-15s %s", queryctrl->name, querymenu.name, t);
 		free(t);
-
+		
 		break;
-
+	
 	case V4L2_CTRL_TYPE_BUTTON:
 		MSG("%-25s %-15s %s", queryctrl->name, "-", "[Button]");
 		break;
-
+		
 	default:
 		MSG("%-25s %-15s %s", queryctrl->name, "N/A", "[Unknown Control Type]");
 		break;
 	}
-
+	
 	return(0);
 }
 
@@ -387,23 +374,23 @@ int src_v4l2_set_control(src_t *src, struct v4l2_queryctrl *queryctrl)
 	struct v4l2_querymenu querymenu;
 	char *sv;
 	int iv;
-
+	
 	if(queryctrl->flags & V4L2_CTRL_FLAG_DISABLED) return(0);
 	if(src_get_option_by_name(src->option, (char *) queryctrl->name, &sv))
 		return(0);
-
+	
 	memset(&querymenu, 0, sizeof(querymenu));
 	memset(&control, 0, sizeof(control));
-
+	
 	control.id = queryctrl->id;
-
+	
 	switch(queryctrl->type)
 	{
 	case V4L2_CTRL_TYPE_INTEGER:
-
+		
 		/* Convert the value to an integer. */
 		iv = atoi(sv);
-
+		
 		/* Is the value a precentage? */
 		if(strchr(sv, '%'))
 		{
@@ -411,83 +398,83 @@ int src_v4l2_set_control(src_t *src, struct v4l2_queryctrl *queryctrl)
 			iv = SCALE(queryctrl->minimum, queryctrl->maximum,
 			           0, 100, iv);
 		}
-
+		
 		MSG("Setting %s to %i (%i%%).", queryctrl->name, iv,
 		    SCALE(0, 100, queryctrl->minimum, queryctrl->maximum, iv));
-
+		
 		if(iv < queryctrl->minimum || iv > queryctrl->maximum)
 			WARN("Value is out of range. Setting anyway.");
-
+		
 		control.value = iv;
 		ioctl(s->fd, VIDIOC_S_CTRL, &control);
 		break;
-
+	
 	case V4L2_CTRL_TYPE_BOOLEAN:
-
+		
 		iv = -1;
 		if(!strcasecmp(sv, "1") || !strcasecmp(sv, "true")) iv = 1;
 		if(!strcasecmp(sv, "0") || !strcasecmp(sv, "false")) iv = 0;
-
+		
 		if(iv == -1)
 		{
 			WARN("Unknown boolean value '%s' for %s.",
 			     sv, queryctrl->name);
 			return(-1);
 		}
-
+		
 		MSG("Setting %s to %s (%i).", queryctrl->name, sv, iv);
-
+		
 		control.value = iv;
 		ioctl(s->fd, VIDIOC_S_CTRL, &control);
-
+		
 		break;
-
+	
 	case V4L2_CTRL_TYPE_MENU:
-
+		
 		/* Scan for a matching value. */
 		querymenu.id = queryctrl->id;
-
+		
 		for(iv = queryctrl->minimum; iv <= queryctrl->maximum; iv++)
 		{
 			querymenu.index = iv;
-
+			
 			if(ioctl(s->fd, VIDIOC_QUERYMENU, &querymenu))
 			{
 				ERROR("Error querying menu.");
 				continue;
 			}
-
+			
 			if(!strncasecmp((char *) querymenu.name, sv, 32))
 				break;
 		}
-
+		
 		if(iv > queryctrl->maximum)
 		{
 			MSG("Unknown value '%s' for %s.", sv, queryctrl->name);
 			return(-1);
 		}
-
+		
 		MSG("Setting %s to %s (%i).",
 		    queryctrl->name, querymenu.name, iv);
-
+		
 		control.value = iv;
 		ioctl(s->fd, VIDIOC_S_CTRL, &control);
-
+		
 		break;
-
+	
 	case V4L2_CTRL_TYPE_BUTTON:
-
+		
 		MSG("Triggering %s control.", queryctrl->name);
 		ioctl(s->fd, VIDIOC_S_CTRL, &control);
-
+		
 		break;
-
+	
 	default:
 		WARN("Not setting unknown control type %i (%s).",
 		     queryctrl->name);
 		break;
 	}
-
+	
 	return(0);
 }
 
@@ -497,14 +484,14 @@ int src_v4l2_set_controls(src_t *src)
 	struct v4l2_queryctrl queryctrl;
 	struct v4l2_control control;
 	int c, rc;
-
+	
 	memset(&queryctrl, 0, sizeof(queryctrl));
-
+	
 	if(src->list & SRC_LIST_CONTROLS)
 	{
 		HEAD("%-25s %-15s %s", "Available Controls", "Current Value", "Range");
 		MSG("%-25s %-15s %s",  "------------------", "-------------", "-----");
-
+		
 		/* Display all controls */
 		queryctrl.id = V4L2_CTRL_FLAG_NEXT_CTRL;
 		while (0 == ioctl(s->fd, VIDIOC_QUERYCTRL, &queryctrl))
@@ -513,7 +500,7 @@ int src_v4l2_set_controls(src_t *src)
 			queryctrl.id |= V4L2_CTRL_FLAG_NEXT_CTRL;
 		}
 	}
-
+	
 	/* Set all controls */
 	queryctrl.id = V4L2_CTRL_FLAG_NEXT_CTRL;
 	while (0 == ioctl(s->fd, VIDIOC_QUERYCTRL, &queryctrl))
@@ -560,31 +547,31 @@ int src_v4l2_set_pix_format(src_t *src)
 	src_v4l2_t *s = (src_v4l2_t *) src->state;
 	struct v4l2_fmtdesc fmt;
 	int v4l2_pal;
-
+	
 	/* Dump a list of formats the device supports. */
-	DEBUG("Device offers the following V4L2 pixel formats (mplane[ %d ]:", use_mplane);
-
+	DEBUG("Device offers the following V4L2 pixel formats:");
+	
 	v4l2_pal = 0;
 	memset(&fmt, 0, sizeof(fmt));
 	fmt.index = v4l2_pal;
-	fmt.type  = BUF_TYPE_CAPTURE(use_mplane);
-
-	while(ioctl(s->fd, VIDIOC_ENUM_FMT, &fmt) == 0)
+	fmt.type  = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+	
+	while(ioctl(s->fd, VIDIOC_ENUM_FMT, &fmt) != -1)
 	{
 		DEBUG("%i: [0x%08X] '%c%c%c%c' (%s)", v4l2_pal,
 		      fmt.pixelformat,
 		      fmt.pixelformat >> 0,  fmt.pixelformat >> 8,
 		      fmt.pixelformat >> 16, fmt.pixelformat >> 24,
 		      fmt.description);
-
+		
 		memset(&fmt, 0, sizeof(fmt));
 		fmt.index = ++v4l2_pal;
-		fmt.type  = BUF_TYPE_CAPTURE(use_mplane);
+		fmt.type  = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 	}
-
+	
 	/* Step through each palette type. */
 	v4l2_pal = 0;
-
+	
 	if(src->palette != -1)
 	{
 		while(v4l2_palette[v4l2_pal].v4l2)
@@ -592,39 +579,39 @@ int src_v4l2_set_pix_format(src_t *src)
 			if(v4l2_palette[v4l2_pal].src == src->palette) break;
 			v4l2_pal++;
 		}
-
+		
 		if(!v4l2_palette[v4l2_pal].v4l2)
 		{
 			ERROR("Unable to handle palette format %s.",
 			      src_palette[src->palette]);
-
+			
 			return(-1);
 		}
 	}
-
+	
 	while(v4l2_palette[v4l2_pal].v4l2)
 	{
 		/* Try the palette... */
 		memset(&s->fmt, 0, sizeof(s->fmt));
-		s->fmt.type                = BUF_TYPE_CAPTURE(use_mplane);
+		s->fmt.type                = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 		s->fmt.fmt.pix.width       = src->width;
 		s->fmt.fmt.pix.height      = src->height;
 		s->fmt.fmt.pix.pixelformat = v4l2_palette[v4l2_pal].v4l2;
 		s->fmt.fmt.pix.field       = V4L2_FIELD_ANY;
-
+		
 		if(ioctl(s->fd, VIDIOC_TRY_FMT, &s->fmt) != -1 &&
 		   s->fmt.fmt.pix.pixelformat == v4l2_palette[v4l2_pal].v4l2)
 		{
 			src->palette = v4l2_palette[v4l2_pal].src;
-
+			
 			INFO("Using palette %s", src_palette[src->palette].name);
 			INFO("%i: '%c%c%c%c'", v4l2_pal,
 			      s->fmt.fmt.pix.pixelformat >> 0,  s->fmt.fmt.pix.pixelformat >> 8,
 			      s->fmt.fmt.pix.pixelformat >> 16, s->fmt.fmt.pix.pixelformat >> 24);
-			sprintf(src->src_palette,"'%c%c%c%c'",
+			sprintf(src->src_palette,"'%c%c%c%c'", 
 				s->fmt.fmt.pix.pixelformat >> 0,  s->fmt.fmt.pix.pixelformat >> 8,
 				s->fmt.fmt.pix.pixelformat >> 16, s->fmt.fmt.pix.pixelformat >> 24);
-
+			
 			if(s->fmt.fmt.pix.width != src->width ||
 			   s->fmt.fmt.pix.height != src->height)
 			{
@@ -635,34 +622,34 @@ int src_v4l2_set_pix_format(src_t *src)
 				src->width = s->fmt.fmt.pix.width;
 				src->height = s->fmt.fmt.pix.height;
                         }
-
+			
 			if(ioctl(s->fd, VIDIOC_S_FMT, &s->fmt) == -1)
 			{
 				ERROR("Error setting pixel format.");
 				ERROR("VIDIOC_S_FMT: %s", strerror(errno));
 				return(-1);
 			}
-
+			
 			if(v4l2_palette[v4l2_pal].v4l2 == V4L2_PIX_FMT_MJPEG)
 			{
 				struct v4l2_jpegcompression jpegcomp;
-
+				
 				memset(&jpegcomp, 0, sizeof(jpegcomp));
 				ioctl(s->fd, VIDIOC_G_JPEGCOMP, &jpegcomp);
 				jpegcomp.jpeg_markers |= V4L2_JPEG_MARKER_DHT;
 				ioctl(s->fd, VIDIOC_S_JPEGCOMP, &jpegcomp);
 			}
-
+			
 			return(0);
 		}
-
+		
 		if(src->palette != -1) break;
-
+		
 		v4l2_pal++;
 	}
-
+	
 	ERROR("Unable to find a compatible palette format.");
-
+	
 	return(-1);
 }
 
@@ -670,10 +657,10 @@ int src_v4l2_set_fps(src_t *src)
 {
 	src_v4l2_t *s = (src_v4l2_t *) src->state;
 	struct v4l2_streamparm setfps;
-
+	
 	memset(&setfps, 0, sizeof(setfps));
-
-	setfps.type = BUF_TYPE_CAPTURE(use_mplane);
+	
+	setfps.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 	setfps.parm.capture.timeperframe.numerator = 1;
 	setfps.parm.capture.timeperframe.denominator = src->fps;
 	if(ioctl(s->fd, VIDIOC_S_PARM, &setfps) == -1)
@@ -683,7 +670,7 @@ int src_v4l2_set_fps(src_t *src)
 		WARN("VIDIOC_S_PARM: %s", strerror(errno));
 		return(-1);
 	}
-
+	
 	return(0);
 }
 
@@ -691,66 +678,61 @@ int src_v4l2_free_mmap(src_t *src)
 {
 	src_v4l2_t *s = (src_v4l2_t *) src->state;
 	int i;
-
+	
 	for(i = 0; i < s->req.count; i++)
 		munmap(s->buffer[i].start, s->buffer[i].length);
-
+	
 	return(0);
 }
 
 int src_v4l2_set_mmap(src_t *src)
 {
-	struct v4l2_plane planes[NPLANES + 1];
 	src_v4l2_t *s = (src_v4l2_t *) src->state;
 	enum v4l2_buf_type type;
 	uint32_t b;
-
+	
 	/* Does the device support streaming? */
 	if(~s->cap.capabilities & V4L2_CAP_STREAMING) return(-1);
-
+	
 	memset(&s->req, 0, sizeof(s->req));
-
-	s->req.count  = BUFFER_COUNT;
-	s->req.type   = BUF_TYPE_CAPTURE(use_mplane);
+	
+	s->req.count  = 4;
+	s->req.type   = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 	s->req.memory = V4L2_MEMORY_MMAP;
-
+	
 	if(ioctl(s->fd, VIDIOC_REQBUFS, &s->req) == -1)
 	{
 		ERROR("Error requesting buffers for memory map.");
 		ERROR("VIDIOC_REQBUFS: %s", strerror(errno));
 		return(-1);
 	}
-
+	
 	DEBUG("mmap information:");
 	DEBUG("frames=%d", s->req.count);
-
+	
 	if(s->req.count < 2)
 	{
 		ERROR("Insufficient buffer memory.");
 		return(-1);
         }
-
+	
 	s->buffer = calloc(s->req.count, sizeof(v4l2_buffer_t));
 	if(!s->buffer)
 	{
 		ERROR("Out of memory.");
 		return(-1);
 	}
-
+	
 	for(b = 0; b < s->req.count; b++)
 	{
 		struct v4l2_buffer buf;
-
+		
 		memset(&buf, 0, sizeof(buf));
-
-		buf.type   = BUF_TYPE_CAPTURE(use_mplane);
+		
+		buf.type   = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 		buf.memory = V4L2_MEMORY_MMAP;
 		buf.index  = b;
-		if (use_mplane) {
-		    buf.length = NPLANES;
-		    buf.m.planes = planes;
-		}
-
+		
 		if(ioctl(s->fd, VIDIOC_QUERYBUF, &buf) == -1)
 		{
 			ERROR("Error querying buffer %i", b);
@@ -759,17 +741,11 @@ int src_v4l2_set_mmap(src_t *src)
 			s->buffer = NULL;
 			return(-1);
 		}
-
-                if (use_mplane) {
-		    s->buffer[b].length = buf.m.planes[0].length;
-		    s->buffer[b].start = mmap(NULL, buf.m.planes[0].length,
-		    PROT_READ | PROT_WRITE, MAP_SHARED, s->fd, buf.m.planes[0].m.mem_offset);
-                } else {
-		    s->buffer[b].length = buf.length;
-		    s->buffer[b].start = mmap(NULL, buf.length,
-		    PROT_READ | PROT_WRITE, MAP_SHARED, s->fd, buf.m.offset);
-                }
-
+		
+		s->buffer[b].length = buf.length;
+		s->buffer[b].start = mmap(NULL, buf.length,
+		   PROT_READ | PROT_WRITE, MAP_SHARED, s->fd, buf.m.offset);
+		
 		if(s->buffer[b].start == MAP_FAILED)
 		{
 			ERROR("Error mapping buffer %i", b);
@@ -780,28 +756,20 @@ int src_v4l2_set_mmap(src_t *src)
 			s->buffer = NULL;
 			return(-1);
 		}
-
-		if (use_mplane) {
-		    DEBUG("%i length=%d", b, buf.m.planes[0].length);
-		} else {
-		    DEBUG("%i length=%d", b, buf.length);
-		}
+		
+		DEBUG("%i length=%d", b, buf.length);
 	}
-
+	
 	s->map = -1;
-
+	
 	for(b = 0; b < s->req.count; b++)
 	{
 		memset(&s->buf, 0, sizeof(s->buf));
-
-		s->buf.type   = BUF_TYPE_CAPTURE(use_mplane);
+		
+		s->buf.type   = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 		s->buf.memory = V4L2_MEMORY_MMAP;
 		s->buf.index  = b;
-                if (use_mplane) {
-                    s->buf.m.planes = planes;
-                    s->buf.length = NPLANES;
-                }
-
+		
 		if(ioctl(s->fd, VIDIOC_QBUF, &s->buf) == -1)
 		{
 			ERROR("VIDIOC_QBUF: %s", strerror(errno));
@@ -811,9 +779,9 @@ int src_v4l2_set_mmap(src_t *src)
 			return(-1);
 		}
 	}
-
-	type = BUF_TYPE_CAPTURE(use_mplane);
-
+	
+	type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+	
 	if(ioctl(s->fd, VIDIOC_STREAMON, &type) == -1)
 	{
 		ERROR("Error starting stream.");
@@ -823,49 +791,49 @@ int src_v4l2_set_mmap(src_t *src)
 		s->buffer = NULL;
 		return(-1);
 	}
-
+	
 	return(0);
 }
 
 int src_v4l2_set_read(src_t *src)
 {
 	src_v4l2_t *s = (src_v4l2_t *) src->state;
-
+	
 	if(~s->cap.capabilities & V4L2_CAP_READWRITE) return(-1);
-
+	
 	s->buffer = calloc(1, sizeof(v4l2_buffer_t));
 	if(!s->buffer)
 	{
 		ERROR("Out of memory.");
 		return(-1);
 	}
-
+	
 	s->buffer[0].length = s->fmt.fmt.pix.sizeimage;
 	s->buffer[0].start  = malloc(s->buffer[0].length);
-
+	
 	if(!s->buffer[0].start)
 	{
 		ERROR("Out of memory.");
-
+		
 		free(s->buffer);
 		s->buffer = NULL;
-
+		
 		return(-1);
 	}
-
+	
 	return(0);
 }
 
 static int src_v4l2_open(src_t *src)
 {
 	src_v4l2_t *s;
-
+	
 	if(!src->source)
 	{
 		ERROR("No device name specified.");
 		return(-2);
 	}
-
+	
 	/* Allocate memory for the state structure. */
 	s = calloc(sizeof(src_v4l2_t), 1);
 	if(!s)
@@ -873,9 +841,9 @@ static int src_v4l2_open(src_t *src)
 		ERROR("Out of memory.");
 		return(-2);
 	}
-
+	
 	src->state = (void *) s;
-
+	
 	/* Open the device. */
 	s->fd = open(src->source, O_RDWR | O_NONBLOCK);
 	if(s->fd < 0)
@@ -885,50 +853,50 @@ static int src_v4l2_open(src_t *src)
 		free(s);
 		return(-2);
 	}
-
+	
 	MSG("%s opened.", src->source);
-
+	
 	/* Get the device capabilities. */
 	if(src_v4l2_get_capability(src))
 	{
 		src_v4l2_close(src);
 		return(-2);
 	}
-
+	
 	/* Set the input. */
-	if(!use_mplane && src_v4l2_set_input(src))
+	if(src_v4l2_set_input(src))
 	{
 		src_v4l2_close(src);
 		return(-1);
 	}
-
+	
 	/* Set picture options. */
 	src_v4l2_set_controls(src);
-
+	
 	/* Set the pixel format. */
 	if(src_v4l2_set_pix_format(src))
 	{
 		src_v4l2_close(src);
 		return(-1);
 	}
-
+	
 	/* Set the frame-rate if > 0 */
 	if(src->fps) src_v4l2_set_fps(src);
-
+	
 	/* Delay to let the image settle down. */
 	if(src->delay)
 	{
 		MSG("Delaying %i seconds.", src->delay);
 		usleep(src->delay * 1000 * 1000);
 	}
-
+	
 	/* Try to setup mmap. */
 	if(!src->use_read && src_v4l2_set_mmap(src))
 	{
 		WARN("Unable to use mmap. Using read instead.");
 		src->use_read = -1;
 	}
-
+	
 	/* If unable to use mmap or user requested read(). */
 	if(src->use_read)
 	{
@@ -939,16 +907,16 @@ static int src_v4l2_open(src_t *src)
 			return(-1);
 		}
 	}
-
+	
 	s->pframe = -1;
-
+	
 	return(0);
 }
 
 static int src_v4l2_close(src_t *src)
 {
 	src_v4l2_t *s = (src_v4l2_t *) src->state;
-
+	
 	if(s->buffer)
 	{
 		if(!s->map) free(s->buffer[0].start);
@@ -957,86 +925,73 @@ static int src_v4l2_close(src_t *src)
 	}
 	if(s->fd >= 0) close(s->fd);
 	free(s);
-
+	
 	return(0);
 }
 
 static int src_v4l2_grab(src_t *src)
 {
-        // struct v4l2_buffer buf;
-	enum v4l2_buf_type type;
-        struct v4l2_plane planes[NPLANES + 1];
 	src_v4l2_t *s = (src_v4l2_t *) src->state;
-
+	
 	if(src->timeout)
 	{
 		fd_set fds;
 		struct timeval tv;
 		int r;
-
+		
 		/* Is a frame ready? */
 		FD_ZERO(&fds);
 		FD_SET(s->fd, &fds);
-
+		
 		tv.tv_sec = src->timeout;
 		tv.tv_usec = 0;
-
+		
 		r = select(s->fd + 1, &fds, NULL, NULL, &tv);
-
+		
 		if(r == -1)
 		{
 			ERROR("select: %s", strerror(errno));
 			return(-1);
 		}
-
+		
 		if(!r)
 		{
 			ERROR("Timed out waiting for frame!");
 			return(-1);
 		}
 	}
-
+	
 	if(s->map)
 	{
 		if(s->pframe >= 0)
 		{
-			s->buf.type = BUF_TYPE_CAPTURE(use_mplane);
-			s->buf.memory = V4L2_MEMORY_MMAP;
-			if (use_mplane) {
-			    s->buf.m.planes = planes;
-			    s->buf.length = NPLANES;
-			}
 			if(ioctl(s->fd, VIDIOC_QBUF, &s->buf) == -1)
 			{
 				ERROR("VIDIOC_QBUF: %s", strerror(errno));
 				return(-1);
 			}
 		}
-
+		
 		memset(&s->buf, 0, sizeof(s->buf));
-
-		s->buf.type = BUF_TYPE_CAPTURE(use_mplane);
+		
+		s->buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 		s->buf.memory = V4L2_MEMORY_MMAP;
-		if (use_mplane) {
-		    s->buf.m.planes = planes;
-		    s->buf.length = NPLANES;
-		}
-
+		
 		if(ioctl(s->fd, VIDIOC_DQBUF, &s->buf) == -1)
 		{
 			ERROR("VIDIOC_DQBUF: %s", strerror(errno));
 			return(-1);
 		}
-
+		
 		src->img    = s->buffer[s->buf.index].start;
 		src->length = s->buffer[s->buf.index].length;
-
+		
 		s->pframe = s->buf.index;
 	}
 	else
 	{
 		ssize_t r;
-
+		
 		r = read(s->fd, s->buffer[0].start, s->buffer[0].length);
 		if(r <= 0)
 		{
@@ -1044,19 +999,11 @@ static int src_v4l2_grab(src_t *src)
 			ERROR("read: %s", strerror(errno));
 			return(-1);
 		}
-
+		
 		src->img = s->buffer[0].start;
 		src->length = r;
 	}
-#if _STOP_
-        ERROR("STREAMOFF");
-        type = BUF_TYPE_CAPTURE(use_mplane);
-	if(ioctl(s->fd, VIDIOC_STREAMOFF, &type) == -1)
-	{
-		ERROR("Error stopping stream.");
-		ERROR("VIDIOC_STREAMOFF: %s", strerror(errno));
-	}
-#endif
+	
 	return(0);
 }
 

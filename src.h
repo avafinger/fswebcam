@@ -81,8 +81,8 @@ typedef struct {
 	uint32_t delay;
 	uint32_t timeout;
 	char     use_read;
-
-	/* Hack (@lex) */
+	
+	/* List Options */
 	int exposure;
 	int hflip;
 	int vflip;
@@ -129,3 +129,4 @@ extern int src_get_option_by_name(src_option_t **opt, char *name, char **value);
 extern int src_free_options(src_option_t ***options);
 
 #endif
+

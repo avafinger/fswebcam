@@ -33,6 +33,12 @@ and FreeType support.
 
 ** Don't forget to update your GC2035 driver to get better results
 
+## Rockchip platform support
+
+**IMX-415 camera sensor:**
+
+ 	fswebcam  --displayfps 1 -S 90 -d /dev/video11 -r 3864x2192 -p UYVY  - > 3864x2192.jpg
+
 
 ## Mainline Kernel support
 

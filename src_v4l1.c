@@ -19,7 +19,7 @@
 #include <errno.h>
 #include <sys/ioctl.h>
 #include <sys/mman.h>
-#include "videodev.h"
+#include <libv4l1-videodev.h>
 #include "videodev_mjpeg.h"
 #include "src.h"
 #include "log.h"
