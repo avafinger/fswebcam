@@ -81,6 +81,7 @@ v4l2_palette_t v4l2_palette[] = {
 	{ SRC_PAL_RGB555,  V4L2_PIX_FMT_RGB555 },
 	{ SRC_PAL_Y16,     V4L2_PIX_FMT_Y16    },
 	{ SRC_PAL_GREY,    V4L2_PIX_FMT_GREY   },
+	{ SRC_PAL_NV12,    V4L2_PIX_FMT_NV12   },
 	{ 0, 0 }
 };
 

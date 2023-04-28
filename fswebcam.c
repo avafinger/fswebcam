@@ -100,19 +100,19 @@ enum fswc_options {
 };
 
 typedef struct {
-	
+
 	/* List of options. */
 	char *opts;
 	const struct option *long_opts;
-	
+
 	/* When reading from the command line. */
 	int opt_index;
-	
+
 	/* When reading from a configuration file. */
 	char *filename;
 	FILE *f;
 	size_t line;
-	
+
 } fswc_getopt_t;
 
 typedef struct {
@@ -121,7 +121,7 @@ typedef struct {
 } fswebcam_job_t;
 
 typedef struct {
-	
+
 	/* General options. */
 	unsigned long loop;
 	signed long offset;
@@ -129,10 +129,10 @@ typedef struct {
 	char *pidfile;
 	char *logfile;
 	char gmt;
-	
+
 	/* Capture start time. */
 	time_t start;
-	
+
 	/* Device options. */
 	char *device;
 	char *input;
@@ -141,7 +141,7 @@ typedef struct {
 	unsigned long delay;
 	char use_read;
 	uint8_t list;
-	
+
 	/* Image capture options. */
 	unsigned int width;
 	unsigned int height;
@@ -151,11 +151,11 @@ typedef struct {
 	int palette;
 	src_option_t **option;
 	char *dumpframe;
-	
+
 	/* Job queue. */
 	uint8_t jobs;
 	fswebcam_job_t **job;
-	
+
 	/* Banner options. */
 	char banner;
 	uint32_t bg_colour;
@@ -168,16 +168,16 @@ typedef struct {
 	char *font;
 	int fontsize;
 	char shadow;
-	
+
 	/* Overlay options. */
 	char *underlay;
 	char *overlay;
-	
+
 	/* Output options. */
 	char *filename;
 	char format;
 	char compression;
-	
+
 	/* Hack (@lex) */
 	int exposure;
 	int hflip;
@@ -185,7 +185,7 @@ typedef struct {
 	int display_fps;
 	int captured_fps;
 	unsigned char src_palette[8];
-	
+
 } fswebcam_config_t;
 
 volatile char received_sigusr1 = 0;
@@ -209,7 +209,7 @@ void fswc_signal_hup_handler(int signum)
 void fswc_signal_term_handler(int signum)
 {
 	char *signame;
-	
+
 	/* Catches SIGTERM and SIGINT */
 	switch(signum)
 	{
@@ -217,7 +217,7 @@ void fswc_signal_term_handler(int signum)
 	case SIGINT:  signame = "SIGINT"; break;
 	default:      signame = "Unknown"; break;
 	}
-	
+
 	INFO("Caught signal %s", signame);
 	received_sigterm = 1;
 }
@@ -228,7 +228,7 @@ int fswc_setup_signals()
 	signal(SIGHUP,  fswc_signal_hup_handler);
 	signal(SIGTERM, fswc_signal_term_handler);
 	signal(SIGINT,  fswc_signal_term_handler);
-	
+
 	return(0);
 }
 
@@ -236,18 +236,18 @@ char *fswc_strftime(char *dst, size_t max, char *src,
                     time_t timestamp, int gmt)
 {
 	struct tm tm_timestamp;
-	
+
 	/* Clear target string, and verify source is set */
 	*dst = '\0';
 	if(!src) return(dst);
-	
+
 	/* Set the time structure. */
 	if(gmt) gmtime_r(&timestamp, &tm_timestamp);
 	else localtime_r(&timestamp, &tm_timestamp);
-	
+
 	/* Create the string */
 	strftime(dst, max, src, &tm_timestamp);
-	
+
 	return(dst);
 }
 
@@ -256,38 +256,38 @@ char *fswc_strduptime(char *src, time_t timestamp, int gmt)
 	struct tm tm_timestamp;
 	char *dst;
 	size_t l;
-	
+
 	if(!src) return(NULL);
-	
+
 	/* Set the time structure. */
 	if(gmt) gmtime_r(&timestamp, &tm_timestamp);
 	else localtime_r(&timestamp, &tm_timestamp);
-	
+
 	dst = NULL;
 	l = strlen(src) * 2;
-	
+
 	while(1)
 	{
 		size_t r;
 		char *t = realloc(dst, l);
-		
+
 		if(!t)
 		{
 			free(dst);
 			return(NULL);
 		}
-		
+
 		dst = t;
-		
+
 		*dst = 1;
 		r = strftime(dst, l, src, &tm_timestamp);
-		
+
 		if(r > 0 && r < l) return(dst);
 		if(r == 0 && *dst == '\0') return(dst);
-		
+
 		l *= 2;
 	}
-	
+
 	return(NULL);
 }
 
@@ -297,21 +297,21 @@ void fswc_DrawText(gdImagePtr im, char *font, double size,
 {
 	char *err;
 	int brect[8];
-	
+
 	if(!text) return;
-	
+
 	if(shadow)
 	{
 		uint32_t scolour = colour & 0xFF000000;
-		
+
 		fswc_DrawText(im, font, size, x + 1, y + 1,
 		              align, scolour, 0, text);
 	}
-	
+
 	/* Correct alpha value for GD. */
 	colour = (((colour & 0xFF000000) / 2) & 0xFF000000) +
 	         (colour & 0xFFFFFF);
-	
+
 	/* Pre-render the text. We use the results during alignment. */
 	err = gdImageStringFT(NULL, &brect[0], colour, font, size, 0.0, 0, 0, text);
 	if(err)
@@ -319,14 +319,14 @@ void fswc_DrawText(gdImagePtr im, char *font, double size,
 		WARN("%s", err);
 		return;
 	}
-	
+
 	/* Adjust the coordinates according to the alignment. */
 	switch(align)
 	{
 	case ALIGN_CENTER: x -= brect[4] / 2; break;
 	case ALIGN_RIGHT:  x -= brect[4];     break;
 	}
-	
+
 	/* Render the text onto the image. */
 	gdImageStringFT(im, NULL, colour, font, size, 0.0, x, y, text);
 }
@@ -334,9 +334,9 @@ void fswc_DrawText(gdImagePtr im, char *font, double size,
 int fswc_draw_overlay(fswebcam_config_t *config, char *filename, gdImage *image){
 	FILE *f;
 	gdImage *overlay;
-	
+
 	if(!filename) return(-1);
-	
+
 	f = fopen(filename, "rb");
 	if(!f)
 	{
@@ -344,19 +344,19 @@ int fswc_draw_overlay(fswebcam_config_t *config, char *filename, gdImage *image)
 		ERROR("fopen: %s", strerror(errno));
 		return(-1);
 	}
-	
+
 	overlay = gdImageCreateFromPng(f);
 	fclose(f);
-	
+
 	if(!overlay)
 	{
 		ERROR("Unable to read '%s'. Not a PNG image?", filename);
 		return(-1);
 	}
-	
+
 	gdImageCopy(image, overlay, 0, 0, 0, 0, overlay->sx, overlay->sy);
 	gdImageDestroy(overlay);
-	
+
 	return(0);
 }
 
@@ -369,24 +369,24 @@ int fswc_draw_banner(fswebcam_config_t *config, gdImage *image)
 	int spacing;
 	int top;
 	int y;
-	
+
 	w = gdImageSX(image);
 	h = gdImageSY(image);
-	
+
 	/* Create the timestamp text. */
 	fswc_strftime(timestamp, 200, config->timestamp,
 	              config->start, config->gmt);
-	
+
 	/* Calculate the position and height of the banner. */
 	spacing = 4;
 	height = config->fontsize + (spacing * 2);
-	
+
 	if(config->subtitle || config->info)
 		height += config->fontsize * 0.8 + spacing;
-	
+
 	top = 0;
 	if(config->banner == BOTTOM_BANNER) top = h - height;
-	
+
 	/* Draw the banner line. */
 	if(config->banner == TOP_BANNER)
 	{
@@ -402,15 +402,15 @@ int fswc_draw_banner(fswebcam_config_t *config, gdImage *image)
 		                       w, top - 1,
 		                       config->bl_colour);
 	}
-	
+
 	/* Draw the background box. */
 	gdImageFilledRectangle(image,
 	   0, top,
 	   w, top + height,
 	   config->bg_colour);
-	
+
 	y = top + spacing + config->fontsize;
-	
+
 	/* Draw the title. */
 	fswc_DrawText(image, config->font, config->fontsize,
 	              spacing, y, ALIGN_LEFT,
@@ -424,36 +424,36 @@ int fswc_draw_banner(fswebcam_config_t *config, gdImage *image)
 	              spacing, y, ALIGN_LEFT,
 	              config->fg_colour, config->shadow, FPS);
 	}
-	
+
 	/* Draw the timestamp. */
 	fswc_DrawText(image, config->font, config->fontsize * 0.8,
 	              w - spacing, y, ALIGN_RIGHT,
 	              config->fg_colour, config->shadow, timestamp);
-	
+
 	y += spacing + config->fontsize * 0.8;
-	
+
 	/* Draw the sub-title. */
 	fswc_DrawText(image, config->font, config->fontsize * 0.8,
 	              spacing, y, ALIGN_LEFT,
 	              config->fg_colour, config->shadow, config->subtitle);
-	
+
 	/* Draw the info text. */
 	fswc_DrawText(image, config->font, config->fontsize * 0.7,
 	              w - spacing, y, ALIGN_RIGHT,
 	              config->fg_colour, config->shadow, config->info);
-	
+
 	return(0);
 }
 
 gdImage* fswc_gdImageDuplicate(gdImage* src)
 {
 	gdImage *dst;
-	
+
 	dst = gdImageCreateTrueColor(gdImageSX(src), gdImageSY(src));
 	if(!dst) return(NULL);
-	
+
 	gdImageCopy(dst, src, 0, 0, 0, 0, gdImageSX(src), gdImageSY(src));
-	
+
 	return(dst);
 }
 
@@ -462,17 +462,17 @@ int fswc_output(fswebcam_config_t *config, char *name, gdImage *image)
 	char filename[FILENAME_MAX];
 	gdImage *im;
 	FILE *f;
-	
+
 	if(!name) return(-1);
 	if(!strncmp(name, "-", 2) && config->background)
 	{
 		ERROR("stdout is unavailable in background mode.");
 		return(-1);
 	}
-	
+
 	fswc_strftime(filename, FILENAME_MAX, name,
 	              config->start, config->gmt);
-	
+
 	/* Create a temporary image buffer. */
 	im = fswc_gdImageDuplicate(image);
 	if(!im)
@@ -480,18 +480,18 @@ int fswc_output(fswebcam_config_t *config, char *name, gdImage *image)
 		ERROR("Out of memory.");
 		return(-1);
 	}
-	
+
 	/* Draw the underlay. */
 	fswc_draw_overlay(config, config->underlay, im);
-	
+
 	/* Draw the banner. */
 	if(config->banner != NO_BANNER)
 	{
 		char *err;
-		
+
 		/* Check if drawing text works */
 		err = gdImageStringFT(NULL, NULL, 0, config->font, config->fontsize, 0.0, 0, 0, "");
-		
+
 		if(!err) fswc_draw_banner(config, im);
 		else
 		{
@@ -500,14 +500,14 @@ int fswc_output(fswebcam_config_t *config, char *name, gdImage *image)
 			WARN("Disabling the the banner.");
 		}
 	}
-	
+
 	/* Draw the overlay. */
 	fswc_draw_overlay(config, config->overlay, im);
-	
+
 	/* Write to a file if a filename was given, otherwise stdout. */
 	if(strncmp(name, "-", 2)) f = fopen(filename, "wb");
 	else f = stdout;
-	
+
 	if(!f)
 	{
 		ERROR("Error opening file for output: %s", filename);
@@ -515,7 +515,7 @@ int fswc_output(fswebcam_config_t *config, char *name, gdImage *image)
 		gdImageDestroy(im);
 		return(-1);
 	}
-	
+
 	/* Write the compressed image. */
 	switch(config->format)
 	{
@@ -528,11 +528,11 @@ int fswc_output(fswebcam_config_t *config, char *name, gdImage *image)
 		gdImagePngEx(im, f, config->compression);
 		break;
 	}
-	
+
 	if(f != stdout) fclose(f);
-	
+
 	gdImageDestroy(im);
-	
+
 	return(0);
 }
 
@@ -540,28 +540,28 @@ int fswc_exec(fswebcam_config_t *config, char *cmd)
 {
 	char *cmdline;
 	FILE *p;
-	
+
 	cmdline = fswc_strduptime(cmd, config->start, config->gmt);
 	if(!cmdline) return(-1);
-	
+
 	MSG("Executing '%s'...", cmdline);
-	
+
 	p = popen(cmdline, "r");
 	free(cmdline);
-	
+
 	if(p)
 	{
 		while(!feof(p))
 		{
 			char *n;
 			char line[1024];
-			
+
 			if(!fgets(line, 1024, p)) break;
-			
+
 			while((n = strchr(line, '\n'))) *n = '\0';
 			MSG("%s", line);
 		}
-		
+
 		pclose(p);
 	}
 	else
@@ -569,7 +569,7 @@ int fswc_exec(fswebcam_config_t *config, char *cmd)
 		ERROR("popen: %s", strerror(errno));
 		return(-1);
 	}
-	
+
 	return(0);
 }
 
@@ -590,10 +590,10 @@ int fswc_grab(fswebcam_config_t *config)
 	gdImage *image, *original;
 	uint8_t modified;
 	src_t src;
-	
+
 	/* Record the start time. */
 	config->start = time(NULL);
-	
+
 	/* Set source options... */
 	memset(&src, 0, sizeof(src));
 	src.input      = config->input;
@@ -608,21 +608,21 @@ int fswc_grab(fswebcam_config_t *config)
 	src.height     = config->height;
 	src.fps        = config->fps;
 	src.option     = config->option;
-	
+
 	/* Hack (@lex) */
 	src.exposure   = config->exposure;
 	src.hflip      = config->hflip;
 	src.vflip      = config->vflip;
-	
+
 	HEAD("--- Opening %s...", config->device);
-	
+
 	if(src_open(&src, config->device) == -1) return(-1);
-	
+
 	/* The source may have adjusted the width and height we passed
 	 * to it. Update the main config to match. */
 	config->width  = src.width;
 	config->height = src.height;
-	
+
 	/* Allocate memory for the average bitmap buffer. */
 	abitmap = calloc(config->width * config->height * 3, sizeof(avgbmp_t));
 	if(!abitmap)
@@ -630,37 +630,39 @@ int fswc_grab(fswebcam_config_t *config)
 		ERROR("Out of memory.");
 		return(-1);
 	}
-	
+
 	if(config->frames == 1) HEAD("--- Capturing frame...");
 	else HEAD("--- Capturing %i frames...", config->frames);
-	
+
 	if(config->skipframes == 1) MSG("Skipping frame...");
-	else if(config->skipframes > 1) MSG("Skipped %i frames...", config->skipframes);
-	
+	else if(config->skipframes > 1) MSG("Skipping %i frames...", config->skipframes);
+
 	/* Grab (and do nothing with) the skipped frames. */
 	for(frame = 0; frame < config->skipframes; frame++)
 		if(src_grab(&src) == -1) break;
+
+	if(config->skipframes > 0) MSG("Skipped %i frames (size=%d)...", config->skipframes,src.length);
 
 	if (config->display_fps) {
 		MSG("Display FPS...");
 	}
 
-	
+
 	/* If frames where skipped, inform when normal capture begins. */
 	if(config->skipframes) MSG("Capturing %i frames...", config->frames);
-	
+
 	/* Grab the requested number of frames. */
 	for(frame = 0; frame < config->frames; frame++)
 	{
 		if(src_grab(&src) == -1) break;
-		
+
 		if(!frame && config->dumpframe)
 		{
 			/* Dump the raw data from the first frame to file. */
 			FILE *f;
-			
+
 			MSG("Dumping raw frame to '%s'...", config->dumpframe);
-			
+
 			f = fopen(config->dumpframe, "wb");
 			if(!f) ERROR("fopen: %s", strerror(errno));
 			else
@@ -669,7 +671,7 @@ int fswc_grab(fswebcam_config_t *config)
 				fclose(f);
 			}
 		}
-		
+
 		/* Add frame to the average bitmap. */
 		switch(src.palette)
 		{
@@ -710,6 +712,9 @@ int fswc_grab(fswebcam_config_t *config)
 		case SRC_PAL_NV12MB:
 			fswc_add_image_nv12mb(&src, abitmap);
 			break;
+		case SRC_PAL_NV12:
+			fswc_add_image_nv12(&src, abitmap);
+			break;
 		case SRC_PAL_RGB565:
 			fswc_add_image_rgb565(&src, abitmap);
 			break;
@@ -724,13 +729,13 @@ int fswc_grab(fswebcam_config_t *config)
 			break;
 		}
 	}
-	
+
 	/* We are now finished with the capture card. */
 	src_close(&src);
 	/* saved it for later (display in banner) */
-	config->captured_fps = src.captured_fps; 
+	config->captured_fps = src.captured_fps;
 	strcpy(config->src_palette, src.src_palette);
-	
+
 	/* Fail if no frames where captured. */
 	if(!frame)
 	{
@@ -738,9 +743,9 @@ int fswc_grab(fswebcam_config_t *config)
 		free(abitmap);
 		return(-1);
 	}
-	
+
 	HEAD("--- Processing captured image...");
-	
+
 	/* Copy the average bitmap image to a gdImage. */
 	original = gdImageCreateTrueColor(config->width, config->height);
 	if(!original)
@@ -749,7 +754,7 @@ int fswc_grab(fswebcam_config_t *config)
 		free(abitmap);
 		return(-1);
 	}
-	
+
 	pbitmap = abitmap;
 	for(y = 0; y < config->height; y++)
 		for(x = 0; x < config->width; x++)
@@ -757,16 +762,16 @@ int fswc_grab(fswebcam_config_t *config)
 			int px = x;
 			int py = y;
 			int colour;
-			
+
 			colour  = (*(pbitmap++) / config->frames) << 16;
 			colour += (*(pbitmap++) / config->frames) << 8;
 			colour += (*(pbitmap++) / config->frames);
-			
+
 			gdImageSetPixel(original, px, py, colour);
 		}
-	
+
 	free(abitmap);
-	
+
 	/* Make a copy of the original image. */
 	image = fswc_gdImageDuplicate(original);
 	if(!image)
@@ -775,7 +780,7 @@ int fswc_grab(fswebcam_config_t *config)
 		gdImageDestroy(image);
 		return(-1);
 	}
-	
+
 	/* Set the default values for this run. */
 	if(config->font) free(config->font);
 	if(config->title) free(config->title);
@@ -785,7 +790,7 @@ int fswc_grab(fswebcam_config_t *config)
 	if(config->underlay) free(config->underlay);
 	if(config->overlay) free(config->overlay);
 	if(config->filename) free(config->filename);
-	
+
 	config->banner       = BOTTOM_BANNER;
 	config->bg_colour    = 0x40263A93;
 	config->bl_colour    = 0x00FF0000;
@@ -802,15 +807,15 @@ int fswc_grab(fswebcam_config_t *config)
 	config->filename     = NULL;
 	config->format       = FORMAT_JPEG;
 	config->compression  = -1;
-	
+
 	modified = 1;
-	
+
 	/* Run through the jobs list. */
 	for(x = 0; x < config->jobs; x++)
 	{
 		uint16_t id   = config->job[x]->id;
 		char *options = config->job[x]->options;
-		
+
 		switch(id)
 		{
 		case 1: /* A non-option argument: a filename. */
@@ -993,12 +998,12 @@ int fswc_grab(fswebcam_config_t *config)
 			break;
 		}
 	}
-	
+
 	gdImageDestroy(image);
 	gdImageDestroy(original);
-	
+
 	if(modified) WARN("There are unsaved changes to the image.");
-	
+
 	return(0);
 }
 
@@ -1006,7 +1011,7 @@ int fswc_openlog(fswebcam_config_t *config)
 {
 	char *s;
 	int r;
-	
+
 	/* Get the first part of the filename. */
 	s = argdup(config->logfile, ":", 0, 0);
 	if(!s)
@@ -1014,11 +1019,11 @@ int fswc_openlog(fswebcam_config_t *config)
 		ERROR("Out of memory.");
 		return(-1);
 	}
-	
+
 	if(!strcasecmp(s, "file"))
 	{
 		free(s);
-		
+
 		s = argdup(config->logfile, ":", 1, 0);
 		if(!s)
 		{
@@ -1032,35 +1037,35 @@ int fswc_openlog(fswebcam_config_t *config)
 		log_syslog(1);
 		return(0);
 	}
-	
+
 	r = log_open(s);
 	free(s);
-	
+
 	return(r);
 }
 
 int fswc_background(fswebcam_config_t *config)
 {
 	pid_t pid, sid;
-	
+
 	/* Silence the output if not logging to a file. */
 	if(!config->logfile) log_set_fd(-1);
-	
+
 	/* Fork into the background. */
 	pid = fork();
-	
+
 	if(pid < 0)
 	{
 		ERROR("Error going into the background.");
 		ERROR("fork: %s", strerror(errno));
 		return(-1);
 	}
-	
+
 	/* Is this the parent process? If so, end it. */
 	if(pid > 0) exit(0);
-	
+
 	umask(0);
-	
+
 	/* Create a new SID for the child process. */
 	sid = setsid();
 	if(sid < 0)
@@ -1069,49 +1074,49 @@ int fswc_background(fswebcam_config_t *config)
 		ERROR("setsid: %s", strerror(errno));
 		return(-1);
 	}
-	
+
 	close(STDIN_FILENO);
 	close(STDOUT_FILENO);
 	close(STDERR_FILENO);
-	
+
 	return(0);
 }
 
 int fswc_savepid(fswebcam_config_t *config)
 {
 	FILE *fpid = fopen(config->pidfile, "wt");
-	
+
 	if(!fpid)
 	{
 		ERROR("Error saving PID to file '%s'",config->pidfile);
 		ERROR("fopen: %s", strerror(errno));
-		
+
 		return(-1);
 	}
-	
+
 	fprintf(fpid, "%i\n", getpid());
 	fclose(fpid);
-	
+
 	return(0);
 }
 
 int fswc_find_palette(char *name)
 {
 	int i;
-	
+
 	/* Scan through the palette table until a match is found. */
 	for(i = 0; src_palette[i].name != NULL; i++)
 	{
 		/* If a match was found, return the index. */
 		if(!strcasecmp(src_palette[i].name, name)) return(i);
 	}
-	
+
 	/* No match was found. */
-	ERROR("Unrecognised palette format \"%s\". Supported formats:", name);
-	
+	ERROR("Unrecognised palette format \"%s\". Supported %d formats:", name, i);
+
 	for(i = 0; src_palette[i].name != NULL; i++)
 		ERROR("%s", src_palette[i].name);
-	
+
 	return(-1);
 }
 
@@ -1177,7 +1182,7 @@ int fswc_usage()
 	       "     --save <filename>        Save image to file.\n"
 	       "     --exec <command>         Execute a command and wait for it to complete.\n"
 	       "\n");
-	
+
 	return(0);
 }
 
@@ -1185,81 +1190,81 @@ int fswc_add_job(fswebcam_config_t *config, uint16_t id, char *options)
 {
 	fswebcam_job_t *job;
 	void *n;
-	
+
 	job = malloc(sizeof(fswebcam_job_t));
 	if(!job)
 	{
 		ERROR("Out of memory.");
 		return(-1);
 	}
-	
+
 	job->id = id;
 	if(options) job->options = strdup(options);
 	else job->options = NULL;
-	
+
 	/* Increase the size of the job queue. */
 	n = realloc(config->job, sizeof(fswebcam_job_t *) * (config->jobs + 1));
 	if(!n)
 	{
 		ERROR("Out of memory.");
-		
+
 		if(job->options) free(job->options);
 		free(job);
-		
+
 		return(-1);
 	}
-	
+
 	config->job = n;
-	
+
 	/* Add the new job to the queue. */
 	config->job[config->jobs++] = job;
-	
+
 	return(0);
 }
 
 int fswc_free_jobs(fswebcam_config_t *config)
 {
 	int i;
-	
+
 	/* Scan through all the jobs and free the memory. */
 	for(i = 0; i < config->jobs; i++)
 	{
 		if(config->job[i]->options) free(config->job[i]->options);
 		free(config->job[i]);
 	}
-	
+
 	/* Free the job queue, set settings to zero. */
 	free(config->job);
 	config->job = NULL;
 	config->jobs = 0;
-	
+
 	return(0);
 }
 
 int fswc_set_option(fswebcam_config_t *config, char *option)
 {
 	char *name, *value;
-	
+
 	if(!option) return(-1);
-	
+
 	name = strdup(option);
 	if(!name)
 	{
 		ERROR("Out of memory.");
 		return(-1);
 	}
-	
+
 	value = strchr(name, '=');
 	if(value)
 	{
 		*(value++) = '\0';
 		if(*value == '\0') value = NULL;
 	}
-	
+
 	src_set_option(&config->option, name, value);
-	
+
 	free(name);
-	
+
 	return(0);
 }
 
@@ -1268,16 +1273,16 @@ int fswc_getopt_file(fswc_getopt_t *s)
 	char line[1024];
 	char *arg, *val;
 	struct option *opt;
-	
+
 	while(fgets(line, 1024, s->f))
 	{
 		s->line++;
 		strtrim(line, WHITESPACE);
 		arg = argdup(line, WHITESPACE, 0, 0);
-		
+
 		if(!arg) continue;
 		if(*arg == '#') continue;
-		
+
 		/* Find argument in the list. */
 		opt = (struct option *) s->long_opts;
 		while(opt->name)
@@ -1285,7 +1290,7 @@ int fswc_getopt_file(fswc_getopt_t *s)
 			if(!strcasecmp(opt->name, arg)) break;
 			opt++;
 		}
-		
+
 		if(!opt->name)
 		{
 			ERROR("Unknown argument: %s", arg);
@@ -1293,7 +1298,7 @@ int fswc_getopt_file(fswc_getopt_t *s)
 			free(arg);
 			return(-2);
 		}
-		
+
 		if(opt->val == 'c')
 		{
 			ERROR("You can't use config from a configuration file.");
@@ -1301,51 +1306,51 @@ int fswc_getopt_file(fswc_getopt_t *s)
 			free(arg);
 			return(-2);
 		}
-		
+
 		if(opt->has_arg)
 		{
 			val = argdup(line, WHITESPACE, 1, 0);
 			optarg = val;
 		}
-		
+
 		free(arg);
-		
+
 		return(opt->val);
 	}
-	
+
 	/* Have we reached the end of the file? */
 	if(feof(s->f)) return(-1);
-	
+
 	/* No.. there has been an error. */
 	ERROR("fread: %s", strerror(errno));
-	
+
 	return(-2);
 }
 
 int fswc_getopt(fswc_getopt_t *s, int argc, char *argv[])
 {
 	int c;
-	
+
 	/* If a conf file is opened, read from that. */
 	if(s->f)
 	{
 		/* Read until we find an argument, error or EOF. */
 		c = fswc_getopt_file(s);
-		
+
 		if(c < 0)
 		{
 			/* EOF or error. */
 			fclose(s->f);
 			s->f = NULL;
-			
+
 			if(c == -2) return('!');
 		}
 		else return(c);
 	}
-	
+
 	/* Read from the command line. */
 	c = getopt_long(argc, argv, s->opts, s->long_opts, &s->opt_index);
-	
+
 	return(c);
 }
 
@@ -1426,14 +1431,14 @@ int fswc_getopts(fswebcam_config_t *config, int argc, char *argv[])
 		{0, 0, 0, 0}
 	};
 	char *opts = "-qc:vl:bL:d:i:t:f:D:r:F:s:S:p:R:e";
-	
+
 	s.opts      = opts;
 	s.long_opts = long_opts;
 	s.opt_index = 0;
 	s.filename  = NULL;
 	s.f         = NULL;
 	s.line      = 0;
-	
+
 	/* Set the defaults. */
 	config->loop = 0;
 	config->offset = 0;
@@ -1464,13 +1469,13 @@ int fswc_getopts(fswebcam_config_t *config, int argc, char *argv[])
 	config->exposure = 0xf0000000;
 	config->hflip = 0xf0000000;
 	config->vflip = 0xf0000000;
-	
+
 	/* Don't report errors. */
 	opterr = 0;
-	
+
 	/* Reset getopt to ensure parsing begins at the first argument. */
 	optind = 0;
-	
+
 	/* Parse the command line and any config files. */
 	while((c = fswc_getopt(&s, argc, argv)) != -1)
 	{
@@ -1598,7 +1603,7 @@ int fswc_getopts(fswebcam_config_t *config, int argc, char *argv[])
 			break;
 		}
 	}
-	
+
 	/* Do a sanity check on the options. */
 	if(config->frequency < 0)       config->frequency = 0;
 	if(config->width < 1)           config->width = 1;
@@ -1608,17 +1613,17 @@ int fswc_getopts(fswebcam_config_t *config, int argc, char *argv[])
 	{
 		WARN("Requested %u frames, maximum is %u. Using that.",
 		   config->frames, MAX_FRAMES);
-		
+
 		config->frames = MAX_FRAMES;
 	}
-	
+
 	/* Correct offset if negative or out of range. */
 	if(config->offset && (config->offset %= (signed long) config->loop) < 0)
 		config->offset += config->loop;
-	
+
 	/* Free the config filename if set. */
 	free(s.filename);
-	
+
 	return(0);
 }
 
@@ -1628,7 +1633,7 @@ int fswc_free_config(fswebcam_config_t *config)
 	free(config->logfile);
 	free(config->device);
 	free(config->input);
-	
+
 	free(config->dumpframe);
         free(config->title);
 	free(config->subtitle);
@@ -1638,22 +1643,22 @@ int fswc_free_config(fswebcam_config_t *config)
 	free(config->underlay);
 	free(config->overlay);
 	free(config->filename);
-	
+
 	src_free_options(&config->option);
 	fswc_free_jobs(config);
-	
+
 	memset(config, 0, sizeof(fswebcam_config_t));
-	
+
 	return(0);
 }
 
 int main(int argc, char *argv[])
 {
 	fswebcam_config_t *config;
-	
+
 	/* Set the locale to the system default */
 	setlocale(LC_ALL, "");
-	
+
 	/* Prepare the configuration structure. */
 	config = calloc(sizeof(fswebcam_config_t), 1);
 	if(!config)
@@ -1661,25 +1666,25 @@ int main(int argc, char *argv[])
 		WARN("Out of memory.");
 		return(-1);
 	}
-	
+
 	/* Set defaults and parse the command line. */
 	if(fswc_getopts(config, argc, argv)) return(-1);
-	
+
 	/* Open the log file if one was specified. */
 	if(config->logfile && fswc_openlog(config)) return(-1);
-	
+
 	/* Go into the background if requested. */
 	if(config->background && fswc_background(config)) return(-1);
-	
+
 	/* Save PID of requested. */
 	if(config->pidfile && fswc_savepid(config)) return(-1);
-	
+
 	/* Setup signal handlers. */
 	if(fswc_setup_signals()) return(-1);
-	
+
 	/* Enable FontConfig support in GD */
 	if(!gdFTUseFontConfig(1)) DEBUG("gd has no fontconfig support");
-	
+
 	/* Capture the image(s). */
 	if(!config->loop) fswc_grab(config);
 	else
@@ -1689,21 +1694,21 @@ int main(int argc, char *argv[])
 		{
 			time_t capturetime = time(NULL);
 			char timestamp[32];
-			
+
 			/* Calculate when the next image is due. */
 			capturetime -= (capturetime % config->loop);
 			capturetime += config->loop + config->offset;
-			
+
 			/* Correct the capturetime if the offset pushes
 			 * it to far into the future. */
 			if(capturetime - time(NULL) > config->loop)
 				capturetime -= config->loop;
-			
+
 			fswc_strftime(timestamp, 32, "%Y-%m-%d %H:%M:%S (%Z)",
 			              capturetime, config->gmt);
-			
+
 			MSG(">>> Next image due: %s", timestamp);
-			
+
 			/* Wait until that time comes. */
 			while(time(NULL) < capturetime)
 			{
@@ -1714,41 +1719,41 @@ int main(int argc, char *argv[])
 					MSG("Received HUP signal... reloading configuration.");
 					fswc_free_config(config);
 					fswc_getopts(config, argc, argv);
-					
+
 					/* Clear hup signal. */
 					received_sighup = 0;
 				}
-				
+
 				if(received_sigusr1)
 				{
 					MSG("Received USR1 signal... Capturing image.");
 					break;
 				}
-				
+
 				if(received_sigterm)
 				{
 					MSG("Received TERM signal... exiting.");
 					break;
 				}
 			}
-			
+
 			if(received_sigterm) break;
-			
+
 			/* Clear usr1 signal. */
 			received_sigusr1 = 0;
-			
+
 			/* Capture the image. */
 			fswc_grab(config);
 		}
 	}
-	
+
 	/* Close the log file. */
 	if(config->logfile) log_close();
-	
+
 	/* Free all used memory. */
 	fswc_free_config(config);
 	free(config);
-	
+
 	return(0);
 }
 

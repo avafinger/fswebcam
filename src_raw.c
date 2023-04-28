@@ -69,6 +69,7 @@ int src_raw_open(src_t *src)
 		break;
 	case SRC_PAL_YUV420P:
 	case SRC_PAL_NV12MB:
+	case SRC_PAL_NV12:
 		s->size = (src->width * src->height * 3) / 2;
 		break;
 	case SRC_PAL_BAYER:

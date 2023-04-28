@@ -167,3 +167,61 @@ int fswc_add_image_nv12mb(src_t *src, avgbmp_t *abitmap)
 	return(0);
 }
 
+/*
+ * ===========================
+ * Not optimized, but it works
+ * ===========================
+ *
+*/
+int fswc_add_image_nv12(src_t *src, avgbmp_t *abitmap)
+    {
+    uint32_t width;
+    uint32_t height;
+    width = src->width + src->width % 16;
+    height = src->height + src->height % 16;
+    const int nv_start = src->width * src->height;
+    int  i, j, index = 0, rgb_index = 0;
+    unsigned char y, u, v;
+    int r, g, b, nv_index = 0;
+    unsigned char *yuyv;
+
+    if(src->length != (width * height * 3) / 2) return(-1);
+
+    yuyv = (unsigned char *)src->img;
+
+    for (i = 0; i < height; i++)
+    {
+	for (j = 0; j < width; j++)
+	{
+	    //nv_index = (rgb_index / 2 - width / 2 * ((i + 1) / 2)) * 2;
+	    nv_index = i / 2 * width + j - j % 2;
+	    y = yuyv[rgb_index];
+	    u = yuyv[nv_start + nv_index + 1]; 
+	    v = yuyv[nv_start + nv_index];
+
+	    r = y + (140 * (v - 128)) / 100;  //r
+	    g = y - (34 * (u - 128)) / 100 - (71 * (v - 128)) / 100; //g
+	    b = y + (177 * (u - 128)) / 100; //b
+
+	    if (r > 255)   
+	    r = 255;
+	    if (g > 255)  
+		g = 255;
+	    if (b > 255) 
+		b = 255;
+	    if (r < 0)   
+		r = 0;
+	    if (g < 0)    
+		g = 0;
+	    if (b < 0)  
+		b = 0;
+
+	    index = i * width + j;// rgb_index % width + (height - i - 1) * width;
+	    abitmap[index * 3 + 0] = b;
+	    abitmap[index * 3 + 1] = g;
+	    abitmap[index * 3 + 2] = r;
+	    rgb_index++;
+	}
+    }
+    return(0);
+}
